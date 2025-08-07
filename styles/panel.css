@@ -29,7 +29,11 @@
 }
 
 .tab-btn.active {
-  background: #7289da;
+  background: #25D366; /* Verde para WhatsApp */
+}
+
+.tab-btn[data-tab="discord"].active {
+  background: #7289DA; /* Azul para Discord */
 }
 
 .tab-content {
@@ -48,4 +52,10 @@
   border: none;
   padding: 10px;
   cursor: pointer;
+  margin-top: 5px;
+}
+
+webview {
+  height: 100%;
+  width: 100%;
 }

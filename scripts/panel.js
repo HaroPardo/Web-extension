@@ -2,6 +2,9 @@ document.addEventListener('DOMContentLoaded', () => {
   const pinBtn = document.getElementById('pin-btn');
   const tabBtns = document.querySelectorAll('.tab-btn');
   
+  // Log para verificar cuántos botones se encontraron
+  console.log("Botones de pestaña encontrados:", tabBtns.length);
+
   // Estado de fijado
   let isPinned = false;
   
@@ -19,6 +22,8 @@ document.addEventListener('DOMContentLoaded', () => {
   tabBtns.forEach(btn => {
     btn.addEventListener('click', () => {
       const tabId = btn.dataset.tab;
+      // Log del botón clickeado
+      console.log("Click en pestaña:", tabId);
       switchTab(tabId);
       
       // Guardar pestaña activa
@@ -41,18 +46,30 @@ document.addEventListener('DOMContentLoaded', () => {
   });
   
   function switchTab(tabId) {
+    console.log("Cambiando a pestaña:", tabId);
+    
     // Desactivar todas las pestañas
-    document.querySelectorAll('.tab-content, .tab-btn').forEach(el => {
+    document.querySelectorAll('.tab-btn, .tab-content').forEach(el => {
       el.classList.remove('active');
     });
     
     // Activar pestaña seleccionada
-    document.querySelector(`.tab-btn[data-tab="${tabId}"]`).classList.add('active');
-    document.getElementById(`${tabId}-tab`).classList.add('active');
+    const tabButton = document.querySelector(`.tab-btn[data-tab="${tabId}"]`);
+    const tabContent = document.getElementById(`${tabId}-tab`);
+    
+    if (tabButton && tabContent) {
+      tabButton.classList.add('active');
+      tabContent.classList.add('active');
+      console.log(`Pestaña ${tabId} activada correctamente`);
+    } else {
+      console.error(`Elementos no encontrados para pestaña: ${tabId}`);
+      console.log("Botón:", tabButton, "Contenido:", tabContent);
+    }
   }
   
   function updatePinButton() {
     pinBtn.textContent = isPinned ? '✅ Fijado' : '📌 Fijar';
     pinBtn.style.background = isPinned ? '#43b581' : '#7289da';
+    console.log("Estado de fijado actualizado:", isPinned);
   }
 });

@@ -7,9 +7,11 @@
     "webview",
     "storage"
   ],
-  "host_permissions": [
-    "https://web.whatsapp.com/*",
-    "https://discord.com/*"
+"host_permissions": [
+   "https://web.whatsapp.com/*",
+  "https://discord.com/*",
+  "https://*.whatsapp.com/*",
+  "https://*.discord.com/*"
   ],
   "action": {
     "default_popup": "popup.html",  // IMPORTANTE: Esto debe existir
@@ -21,7 +23,10 @@
   "background": {
     "service_worker": "scripts/background.js"
   },
-  "sandbox": {
-    "pages": ["panel.html"]
+   "sandbox": {
+    "pages": ["panel.html"],
+    "content_security_policy": {
+      "extension_pages": "script-src 'self' 'unsafe-eval'; object-src 'self'"
+    }
   }
 }
