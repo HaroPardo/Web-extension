@@ -1,7 +1,26 @@
 {
   "manifest_version": 3,
-  "permissions": ["webview"],
-  "host_permissions": ["https://web.whatsapp.com/*"],
+  "name": "Social Sidebar",  // REQUERIDO
+  "version": "1.0",          // REQUERIDO
+  "description": "Acceso rápido a WhatsApp y Discord",
+  "permissions": [
+    "webview",
+    "storage"
+  ],
+  "host_permissions": [
+    "https://web.whatsapp.com/*",
+    "https://discord.com/*"
+  ],
+  "action": {
+    "default_title": "Abrir panel social",
+    "default_icon": "icon.png"
+  },
+  "icons": {
+    "128": "icon.png"
+  },
+  "background": {
+    "service_worker": "scripts/background.js"
+  },
   "sandbox": {
     "pages": ["panel.html"]
   }
