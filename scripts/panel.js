@@ -25,6 +25,35 @@ document.addEventListener('DOMContentLoaded', () => {
   function setStorageData(data) {
     sendToBackground({type: "setStorage", data});
   }
+function switchTab(tabId) {
+  console.log("Cambiando a pestaña:", tabId);
+  
+  document.querySelectorAll('.tab-btn, .tab-content').forEach(el => {
+    el.classList.remove('active');
+  });
+  
+  const tabButton = document.querySelector(`.tab-btn[data-tab="${tabId}"]`);
+  const tabContent = document.getElementById(`${tabId}-tab`);
+  
+  if (tabButton && tabContent) {
+    tabButton.classList.add('active');
+    tabContent.classList.add('active');
+    
+    // Forzar recarga del webview
+    const webview = tabContent.querySelector('webview');
+    if (webview) {
+      const currentSrc = webview.getAttribute('src');
+      webview.setAttribute('src', 'about:blank');
+      setTimeout(() => {
+        webview.setAttribute('src', currentSrc);
+      }, 100);
+    }
+    
+    console.log(`Pestaña ${tabId} activada correctamente`);
+  } else {
+    console.error(`Elementos no encontrados para pestaña: ${tabId}`);
+  }
+}
   
   // Escuchar respuestas del background
   window.addEventListener("message", (event) => {
@@ -99,4 +128,18 @@ document.addEventListener('DOMContentLoaded', () => {
       console.log("Estado de fijado actualizado:", isPinned);
     }
   }
+document.querySelectorAll('webview').forEach(webview => {
+  webview.addEventListener('did-fail-load', (event) => {
+    console.error('Error cargando:', event.errorDescription);
+    
+    // Intentar recargar después de 3 segundos
+    setTimeout(() => {
+      const currentSrc = webview.getAttribute('src');
+      webview.setAttribute('src', 'about:blank');
+      setTimeout(() => {
+        webview.setAttribute('src', currentSrc);
+      }, 100);
+    }, 3000);
+  });
+});
 });
