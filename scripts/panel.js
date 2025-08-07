@@ -2,19 +2,31 @@ document.addEventListener('DOMContentLoaded', () => {
   const pinBtn = document.getElementById('pin-btn');
   const tabBtns = document.querySelectorAll('.tab-btn');
   
-  // Log para verificar cuántos botones se encontraron
   console.log("Botones de pestaña encontrados:", tabBtns.length);
 
-  // Estado de fijado
+  // Estado inicial
   let isPinned = false;
+  let activeTab = 'whatsapp';
+  
+  // Función para enviar mensajes al service worker
+  function sendMessage(message, callback) {
+    chrome.runtime.sendMessage(message, callback);
+  }
+  
+  // Función para manejar el almacenamiento
+  function getStorageData(keys, callback) {
+    sendMessage({type: "getStorage", keys}, callback);
+  }
+  
+  function setStorageData(data, callback) {
+    sendMessage({type: "setStorage", data}, callback);
+  }
   
   // Cargar estado guardado
-  chrome.storage.local.get(['isPinned', 'activeTab'], (data) => {
-    isPinned = data.isPinned || false;
+  getStorageData(['isPinned', 'activeTab'], (data) => {
+    isPinned = data?.isPinned || false;
+    activeTab = data?.activeTab || 'whatsapp';
     updatePinButton();
-    
-    // Activar última pestaña usada
-    const activeTab = data.activeTab || 'whatsapp';
     switchTab(activeTab);
   });
   
@@ -22,12 +34,9 @@ document.addEventListener('DOMContentLoaded', () => {
   tabBtns.forEach(btn => {
     btn.addEventListener('click', () => {
       const tabId = btn.dataset.tab;
-      // Log del botón clickeado
       console.log("Click en pestaña:", tabId);
       switchTab(tabId);
-      
-      // Guardar pestaña activa
-      chrome.storage.local.set({ activeTab: tabId });
+      setStorageData({activeTab: tabId});
     });
   });
   
@@ -35,7 +44,7 @@ document.addEventListener('DOMContentLoaded', () => {
   pinBtn.addEventListener('click', () => {
     isPinned = !isPinned;
     updatePinButton();
-    chrome.storage.local.set({ isPinned });
+    setStorageData({isPinned});
   });
   
   // Cerrar si no está fijado
@@ -48,12 +57,10 @@ document.addEventListener('DOMContentLoaded', () => {
   function switchTab(tabId) {
     console.log("Cambiando a pestaña:", tabId);
     
-    // Desactivar todas las pestañas
     document.querySelectorAll('.tab-btn, .tab-content').forEach(el => {
       el.classList.remove('active');
     });
     
-    // Activar pestaña seleccionada
     const tabButton = document.querySelector(`.tab-btn[data-tab="${tabId}"]`);
     const tabContent = document.getElementById(`${tabId}-tab`);
     
@@ -63,7 +70,6 @@ document.addEventListener('DOMContentLoaded', () => {
       console.log(`Pestaña ${tabId} activada correctamente`);
     } else {
       console.error(`Elementos no encontrados para pestaña: ${tabId}`);
-      console.log("Botón:", tabButton, "Contenido:", tabContent);
     }
   }
   
