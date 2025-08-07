@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
-  "name": "Social Sidebar",  // REQUERIDO
-  "version": "1.0",          // REQUERIDO
+  "name": "Social Sidebar",
+  "version": "1.0",
   "description": "Acceso rápido a WhatsApp y Discord",
   "permissions": [
     "webview",
@@ -12,7 +12,7 @@
     "https://discord.com/*"
   ],
   "action": {
-    "default_title": "Abrir panel social",
+    "default_popup": "popup.html",  // IMPORTANTE: Esto debe existir
     "default_icon": "icon.png"
   },
   "icons": {
