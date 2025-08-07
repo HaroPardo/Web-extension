@@ -15,26 +15,20 @@
 
     
     <!-- Contenedor para WhatsApp -->
-    <webview 
+  <iframe
   id="whatsapp-tab"
   class="tab-content active"
   src="https://web.whatsapp.com/"
-  partition="persist:whatsapp"
-  useragent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36"
-  allowpopups
-  webpreferences="javascript=yes"
-  ></webview>
+  sandbox="allow-same-origin allow-scripts allow-popups allow-forms"
+></iframe>
     
     <!-- Contenedor para Discord -->
-    <webview 
+<iframe
   id="discord-tab"
   class="tab-content"
   src="https://discord.com/login"
-  partition="persist:discord"
-  useragent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36"
-  allowpopups
-  webpreferences="javascript=yes"
-  ></webview>
+  sandbox="allow-same-origin allow-scripts allow-popups allow-forms"
+></iframe>
     
     <button id="pin-btn">📌 Fijar</button>
   </div>
