@@ -7,28 +7,41 @@ document.addEventListener('DOMContentLoaded', () => {
   // Estado inicial
   let isPinned = false;
   let activeTab = 'whatsapp';
+  const bridgeIframe = document.getElementById('background-bridge');
   
-  // Función para enviar mensajes al service worker
-  function sendMessage(message, callback) {
-    chrome.runtime.sendMessage(message, callback);
+  // Función para enviar mensajes al background
+  function sendToBackground(message) {
+    bridgeIframe.contentWindow.postMessage({
+      direction: "from-panel",
+      message: message
+    }, "*");
   }
   
   // Función para manejar el almacenamiento
-  function getStorageData(keys, callback) {
-    sendMessage({type: "getStorage", keys}, callback);
+  function getStorageData(keys) {
+    sendToBackground({type: "getStorage", keys});
   }
   
-  function setStorageData(data, callback) {
-    sendMessage({type: "setStorage", data}, callback);
+  function setStorageData(data) {
+    sendToBackground({type: "setStorage", data});
   }
+  
+  // Escuchar respuestas del background
+  window.addEventListener("message", (event) => {
+    if (event.data.direction === "from-background") {
+      const message = event.data.message;
+      
+      if (message.type === "storageData") {
+        isPinned = message.data?.isPinned || false;
+        activeTab = message.data?.activeTab || 'whatsapp';
+        updatePinButton();
+        switchTab(activeTab);
+      }
+    }
+  });
   
   // Cargar estado guardado
-  getStorageData(['isPinned', 'activeTab'], (data) => {
-    isPinned = data?.isPinned || false;
-    activeTab = data?.activeTab || 'whatsapp';
-    updatePinButton();
-    switchTab(activeTab);
-  });
+  getStorageData(['isPinned', 'activeTab']);
   
   // Manejar clicks en pestañas
   tabBtns.forEach(btn => {
@@ -48,8 +61,14 @@ document.addEventListener('DOMContentLoaded', () => {
   });
   
   // Cerrar si no está fijado
+  let ignoreBlur = false;
+  
+  document.addEventListener('mousedown', (e) => {
+    ignoreBlur = !e.target.closest('.sidebar');
+  });
+  
   window.addEventListener('blur', () => {
-    if (!isPinned) {
+    if (!isPinned && !ignoreBlur) {
       window.close();
     }
   });
@@ -74,8 +93,10 @@ document.addEventListener('DOMContentLoaded', () => {
   }
   
   function updatePinButton() {
-    pinBtn.textContent = isPinned ? '✅ Fijado' : '📌 Fijar';
-    pinBtn.style.background = isPinned ? '#43b581' : '#7289da';
-    console.log("Estado de fijado actualizado:", isPinned);
+    if (pinBtn) {
+      pinBtn.textContent = isPinned ? '✅ Fijado' : '📌 Fijar';
+      pinBtn.style.background = isPinned ? '#43b581' : '#7289da';
+      console.log("Estado de fijado actualizado:", isPinned);
+    }
   }
 });
