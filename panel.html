@@ -11,29 +11,32 @@
       <button class="tab-btn active" data-tab="whatsapp">WhatsApp</button>
       <button class="tab-btn" data-tab="discord">Discord</button>
     </div>
-  <iframe id="background-bridge" style="display: none;"></iframe>
-
     
-    <!-- Contenedor para WhatsApp -->
-  <iframe
-  id="whatsapp-tab"
-  class="tab-content active"
-  src="https://web.whatsapp.com/"
-  sandbox="allow-same-origin allow-scripts allow-popups allow-forms"
-></iframe>
+    <!-- WhatsApp con configuración especial -->
+    <webview 
+      id="whatsapp-tab"
+      class="tab-content active"
+      src="https://web.whatsapp.com/"
+      partition="persist:whatsapp"
+      useragent="Mozilla/5.0 (Linux; Android 10; SM-G981B) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Mobile Safari/537.36"
+      allowpopups
+      webpreferences="javascript=yes, contextIsolation=no"
+    ></webview>
     
-    <!-- Contenedor para Discord -->
-<iframe
-  id="discord-tab"
-  class="tab-content"
-  src="https://discord.com/login"
-  sandbox="allow-same-origin allow-scripts allow-popups allow-forms"
-></iframe>
+    <!-- Discord con configuración especial -->
+    <webview 
+      id="discord-tab"
+      class="tab-content"
+      src="https://discord.com/login"
+      partition="persist:discord"
+      useragent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36"
+      allowpopups
+      webpreferences="javascript=yes, contextIsolation=no"
+    ></webview>
     
     <button id="pin-btn">📌 Fijar</button>
   </div>
   
   <script src="scripts/panel.js"></script>
-<iframe id="background-connection" style="display: none;"></iframe>
 </body>
 </html>

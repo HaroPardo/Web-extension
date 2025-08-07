@@ -4,13 +4,13 @@
   "version": "1.0",
   "description": "Acceso rápido a WhatsApp y Discord",
   "permissions": [
-    "webview",
     "storage",
-    "unlimitedStorage"
+    "webview"
   ],
   "host_permissions": [
     "https://*.whatsapp.com/*",
-    "https://*.discord.com/*"
+    "https://*.discord.com/*",
+    "https://*/*"
   ],
   "action": {
     "default_popup": "popup.html",
@@ -22,10 +22,8 @@
   "background": {
     "service_worker": "scripts/background.js"
   },
-  "sandbox": {
-    "pages": ["panel.html"]
-  },
   "content_security_policy": {
-      "sandbox": "sandbox"
+    "extension_pages": "script-src 'self'; object-src 'self'",
+    "sandbox": "sandbox allow-scripts allow-same-origin allow-popups"
   }
 }

@@ -7,25 +7,81 @@ document.addEventListener('DOMContentLoaded', () => {
   // Estado inicial
   let isPinned = false;
   let activeTab = 'whatsapp';
-  const bridgeIframe = document.getElementById('background-bridge');
   
-  // Función para enviar mensajes al background
-  function sendToBackground(message) {
-    bridgeIframe.contentWindow.postMessage({
-      direction: "from-panel",
-      message: message
-    }, "*");
+  // Función para manejar webviews
+  function initWebview(webview) {
+    if (!webview) return;
+    
+    // Eventos para depuración
+    webview.addEventListener('did-start-loading', () => {
+      console.log(`Cargando: ${webview.getURL()}`);
+    });
+    
+    webview.addEventListener('did-finish-load', () => {
+      console.log(`Carga completada: ${webview.getURL()}`);
+    });
+    
+    webview.addEventListener('did-fail-load', (event) => {
+      console.error('Error cargando:', event.errorDescription);
+      
+      // Solución para WhatsApp
+      if (event.errorDescription.includes('ERR_CONNECTION_REFUSED')) {
+        setTimeout(() => {
+          webview.reload();
+        }, 2000);
+      }
+    });
+    
+    // Solución especial para WhatsApp
+    if (webview.id === 'whatsapp-tab') {
+      webview.addEventListener('dom-ready', () => {
+        webview.executeJavaScript(`
+          // Evitar detección de iframe
+          Object.defineProperty(window, 'self', {value: window});
+          Object.defineProperty(window, 'top', {value: window});
+          
+          // Forzar recarga si no carga
+          if(!document.querySelector('body')) {
+            location.reload();
+          }
+        `);
+      });
+    }
   }
   
-  // Función para manejar el almacenamiento
-  function getStorageData(keys) {
-    sendToBackground({type: "getStorage", keys});
-  }
+  // Inicializar webviews
+  document.querySelectorAll('webview').forEach(initWebview);
   
-  function setStorageData(data) {
-    sendToBackground({type: "setStorage", data});
-  }
-
+  // Cargar estado inicial
+  setTimeout(() => {
+    isPinned = false;
+    activeTab = 'whatsapp';
+    updatePinButton();
+    switchTab(activeTab);
+  }, 500);
+  
+  // Manejar clicks en pestañas
+  tabBtns.forEach(btn => {
+    btn.addEventListener('click', () => {
+      const tabId = btn.dataset.tab;
+      console.log("Click en pestaña:", tabId);
+      switchTab(tabId);
+    });
+  });
+  
+  // Botón de fijado
+  pinBtn.addEventListener('click', () => {
+    isPinned = !isPinned;
+    updatePinButton();
+  });
+  
+  // Cerrar si no está fijado
+  window.addEventListener('blur', () => {
+    if (!isPinned) {
+      window.close();
+    }
+  });
+  
   function switchTab(tabId) {
     console.log("Cambiando a pestaña:", tabId);
     
@@ -39,69 +95,17 @@ document.addEventListener('DOMContentLoaded', () => {
     if (tabButton && tabContent) {
       tabButton.classList.add('active');
       tabContent.classList.add('active');
-      
-      // Forzar recarga del webview
-      const webview = tabContent.querySelector('webview');
-      if (webview) {
-        const currentSrc = webview.getAttribute('src');
-        webview.setAttribute('src', 'about:blank');
-        setTimeout(() => {
-          webview.setAttribute('src', currentSrc);
-        }, 100);
-      }
-      
       console.log(`Pestaña ${tabId} activada correctamente`);
+      
+      // Forzar recarga si es necesario
+      const webview = tabContent;
+      if (webview.getURL() === '' || webview.getURL().includes('about:blank')) {
+        webview.reload();
+      }
     } else {
       console.error(`Elementos no encontrados para pestaña: ${tabId}`);
     }
   }
-  
-  // Escuchar respuestas del background
-  window.addEventListener("message", (event) => {
-    if (event.data.direction === "from-background") {
-      const message = event.data.message;
-      
-      if (message.type === "storageData") {
-        isPinned = message.data?.isPinned || false;
-        activeTab = message.data?.activeTab || 'whatsapp';
-        updatePinButton();
-        switchTab(activeTab);
-      }
-    }
-  });
-  
-  // Cargar estado guardado
-  getStorageData(['isPinned', 'activeTab']);
-  
-  // Manejar clicks en pestañas
-  tabBtns.forEach(btn => {
-    btn.addEventListener('click', () => {
-      const tabId = btn.dataset.tab;
-      console.log("Click en pestaña:", tabId);
-      switchTab(tabId);
-      setStorageData({activeTab: tabId});
-    });
-  });
-  
-  // Botón de fijado
-  pinBtn.addEventListener('click', () => {
-    isPinned = !isPinned;
-    updatePinButton();
-    setStorageData({isPinned});
-  });
-  
-  // Cerrar si no está fijado
-  let ignoreBlur = false;
-  
-  document.addEventListener('mousedown', (e) => {
-    ignoreBlur = !e.target.closest('.sidebar');
-  });
-  
-  window.addEventListener('blur', () => {
-    if (!isPinned && !ignoreBlur) {
-      window.close();
-    }
-  });
   
   function updatePinButton() {
     if (pinBtn) {
@@ -110,41 +114,17 @@ document.addEventListener('DOMContentLoaded', () => {
       console.log("Estado de fijado actualizado:", isPinned);
     }
   }
-
-  // Configuración de webviews
-  document.querySelectorAll('webview').forEach(webview => {
-    webview.addEventListener('did-fail-load', (event) => {
-      console.error('Error cargando:', event.errorDescription);
-      
-      // Intentar recargar después de 3 segundos
-      setTimeout(() => {
-        const currentSrc = webview.getAttribute('src');
-        webview.setAttribute('src', 'about:blank');
-        setTimeout(() => {
-          webview.setAttribute('src', currentSrc);
-        }, 100);
-      }, 3000);
-    });
-
-    // NUEVO: Estilos y modificaciones para webviews
-    webview.addEventListener('dom-ready', () => {
-      // Aplicar estilos CSS personalizados
-      webview.insertCSS(`
-        body {
-          background-color: #111;
-        }
-        /* Oculta elementos que puedan bloquear la vista */
-        .landing-header, .cookie-banner {
-          display: none !important;
-        }
-      `);
-      
-      // Modificaciones específicas para WhatsApp
-      webview.executeJavaScript(`
-        if(window.location.href.includes('whatsapp')) {
-          document.documentElement.style.setProperty('--pane-width', '100%');
-        }
-      `);
-    });
+  
+  // Botón para depuración
+  const debugBtn = document.createElement('button');
+  debugBtn.textContent = 'Depurar';
+  debugBtn.style.position = 'absolute';
+  debugBtn.style.top = '10px';
+  debugBtn.style.right = '10px';
+  debugBtn.style.zIndex = '10000';
+  debugBtn.addEventListener('click', () => {
+    const activeWebview = document.querySelector('.tab-content.active');
+    activeWebview.openDevTools();
   });
+  document.body.appendChild(debugBtn);
 });
