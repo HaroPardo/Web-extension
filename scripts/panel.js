@@ -14,39 +14,42 @@ document.addEventListener('DOMContentLoaded', () => {
     
     // Eventos para depuración
     webview.addEventListener('did-start-loading', () => {
-      console.log(`Cargando: ${webview.getURL()}`);
+      console.log(`Cargando: ${webview.src}`);
     });
     
     webview.addEventListener('did-finish-load', () => {
-      console.log(`Carga completada: ${webview.getURL()}`);
+      console.log(`Carga completada: ${webview.src}`);
+      // Solución especial para WhatsApp después de cargar
+      if (webview.id === 'whatsapp-tab' && webview.src.includes('whatsapp')) {
+        webview.executeJavaScript(`
+          // Solución definitiva para detección de iframe
+          try {
+            Object.defineProperty(window, 'self', {value: window});
+            Object.defineProperty(window, 'top', {value: window});
+            window.name = 'whatsapp-webview';
+          } catch(e) {}
+          
+          // Verificar si WhatsApp bloqueó la carga
+          if(!document.querySelector('body')) {
+            setTimeout(() => location.reload(), 1000);
+          }
+        `);
+      }
     });
     
     webview.addEventListener('did-fail-load', (event) => {
       console.error('Error cargando:', event.errorDescription);
       
-      // Solución para WhatsApp
-      if (event.errorDescription.includes('ERR_CONNECTION_REFUSED')) {
+      // Soluciones para errores comunes
+      if (event.errorDescription.includes('ERR_CONNECTION_REFUSED') || 
+          event.errorDescription.includes('ERR_BLOCKED_BY_CLIENT') ||
+          event.errorDescription.includes('ERR_BLOCKED_BY_RESPONSE')) {
         setTimeout(() => {
-          webview.reload();
+          // Solución definitiva: recarga con timestamp
+          webview.src = webview.src.split('?')[0] + '?t=' + Date.now();
         }, 2000);
       }
     });
-    
-    // Solución especial para WhatsApp
-    if (webview.id === 'whatsapp-tab') {
-      webview.addEventListener('dom-ready', () => {
-        webview.executeJavaScript(`
-          // Evitar detección de iframe
-          Object.defineProperty(window, 'self', {value: window});
-          Object.defineProperty(window, 'top', {value: window});
-          
-          // Forzar recarga si no carga
-          if(!document.querySelector('body')) {
-            location.reload();
-          }
-        `);
-      });
-    }
   }
   
   // Inicializar webviews
@@ -97,10 +100,13 @@ document.addEventListener('DOMContentLoaded', () => {
       tabContent.classList.add('active');
       console.log(`Pestaña ${tabId} activada correctamente`);
       
-      // Forzar recarga si es necesario
-      const webview = tabContent;
-      if (webview.getURL() === '' || webview.getURL().includes('about:blank')) {
-        webview.reload();
+      // Solución definitiva para carga
+      if (!tabContent.src || tabContent.src.includes('about:blank')) {
+        if (tabId === 'whatsapp') {
+          tabContent.src = 'https://web.whatsapp.com/?t=' + Date.now();
+        } else if (tabId === 'discord') {
+          tabContent.src = 'https://discord.com/login?t=' + Date.now();
+        }
       }
     } else {
       console.error(`Elementos no encontrados para pestaña: ${tabId}`);
@@ -115,7 +121,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }
   
-  // Botón para depuración
+  // Botón para depuración (SOLUCIÓN FUNCIONAL)
   const debugBtn = document.createElement('button');
   debugBtn.textContent = 'Depurar';
   debugBtn.style.position = 'absolute';
@@ -124,7 +130,16 @@ document.addEventListener('DOMContentLoaded', () => {
   debugBtn.style.zIndex = '10000';
   debugBtn.addEventListener('click', () => {
     const activeWebview = document.querySelector('.tab-content.active');
-    activeWebview.openDevTools();
+    if (activeWebview && activeWebview.getDevTools) {
+      const devTools = activeWebview.getDevTools();
+      if (devTools) {
+        devTools.open();
+      } else {
+        console.error('No se pudo obtener DevTools para el webview');
+      }
+    } else {
+      console.error('Webview no encontrado o API no disponible');
+    }
   });
   document.body.appendChild(debugBtn);
 });

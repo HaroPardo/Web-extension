@@ -13,14 +13,13 @@
     </div>
     
     <!-- WhatsApp con configuración especial -->
-    <webview 
+    <webview
       id="whatsapp-tab"
       class="tab-content active"
       src="https://web.whatsapp.com/"
-      partition="persist:whatsapp"
-      useragent="Mozilla/5.0 (Linux; Android 10; SM-G981B) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Mobile Safari/537.36"
+      useragent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36"
       allowpopups
-      webpreferences="javascript=yes, contextIsolation=no"
+      webpreferences="nativeWindowOpen=yes, javascript=yes, contextIsolation=no"
     ></webview>
     
     <!-- Discord con configuración especial -->
@@ -28,10 +27,9 @@
       id="discord-tab"
       class="tab-content"
       src="https://discord.com/login"
-      partition="persist:discord"
       useragent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36"
       allowpopups
-      webpreferences="javascript=yes, contextIsolation=no"
+      webpreferences="nativeWindowOpen=yes, javascript=yes, contextIsolation=no"
     ></webview>
     
     <button id="pin-btn">📌 Fijar</button>

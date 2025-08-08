@@ -1,9 +1,9 @@
 .sidebar {
-  position: fixed;
+  position: absolute;
   top: 0;
   left: 0;
   width: 400px;
-  height: 100vh;
+  height: 100%;
   overflow: hidden;
   background: #1e1f29;
   display: flex;
