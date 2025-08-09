@@ -2,6 +2,9 @@ const path = require('path');
 const { app, BrowserWindow, ipcMain, screen } = require('electron');
 const ElectronStore = require('electron-store');
 
+// Configurar user-agent global para Chrome
+app.userAgentFallback = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/138.0.0.0 Safari/537.36';
+
 app.disableHardwareAcceleration();
 
 let mainWindow;
@@ -34,7 +37,10 @@ function createWindow() {
       webviewTag: true,
       plugins: true,
       webSecurity: true,
-      allowRunningInsecureContent: false
+      allowRunningInsecureContent: false,
+      // Habilitar características experimentales
+      experimentalFeatures: true,
+      enableBlinkFeatures: 'OverlayScrollbars'
     }
   });
 
