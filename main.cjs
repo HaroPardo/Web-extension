@@ -1,64 +1,73 @@
-// main.cjs
 const path = require('path');
-const { app, BrowserWindow, ipcMain } = require('electron');
-const ElectronStore = require('electron-store'); // usa la v8 (CommonJS)
+const { app, BrowserWindow, ipcMain, screen } = require('electron');
+const ElectronStore = require('electron-store');
 
-// Desactivar la aceleración por hardware para evitar crashes GPU en Windows
 app.disableHardwareAcceleration();
-// opción alternativa/extra (descomentar si hace falta):
-// app.commandLine.appendSwitch('disable-gpu');
 
 let mainWindow;
 const store = new ElectronStore();
 
 function createWindow() {
-  // Ventana tipo sidebar: fijo ancho, no redimensionable ni maximizable
+  const primaryDisplay = screen.getPrimaryDisplay();
+  const { width, height } = primaryDisplay.workAreaSize;
+  
+  const winWidth = 400;
+  const winHeight = 800;
+  const x = 0;
+  const y = Math.floor((height - winHeight) / 2);
+
   mainWindow = new BrowserWindow({
-    width: 400,
-    height: 800,
+    width: winWidth,
+    height: winHeight,
+    x: x,
+    y: y,
     minWidth: 300,
     minHeight: 600,
-    resizable: false,      // no permite cambiar tamaño
-    maximizable: false,    // no permite maximizar
+    resizable: false,
+    maximizable: false,
     frame: false,
+    movable: true,
     webPreferences: {
       preload: path.join(__dirname, 'preload.cjs'),
       contextIsolation: true,
       nodeIntegration: false,
-      webviewTag: true
+      webviewTag: true,
+      plugins: true,
+      webSecurity: true,
+      allowRunningInsecureContent: false
     }
   });
 
-  // Aplicar estado "fijado" (always on top) según lo guardado
+  // Configurar permisos
+  mainWindow.webContents.session.setPermissionRequestHandler((webContents, permission, callback) => {
+    const allowedPermissions = ['media', 'geolocation', 'notifications', 'pointerLock'];
+    callback(allowedPermissions.includes(permission));
+  });
+
   const pinned = store.get('isPinned', false) || false;
   mainWindow.setAlwaysOnTop(!!pinned);
 
   mainWindow.loadFile(path.join(__dirname, 'panel.html'));
-
-  // (Opcional) abrir devtools para depuración
-  // mainWindow.webContents.openDevTools({ mode: 'detach' });
+  
+  // Manejar enlaces externos
+  mainWindow.webContents.setWindowOpenHandler(({ url }) => {
+    return url.startsWith('https://web.whatsapp.com/') ? { action: 'allow' } : { action: 'deny' };
+  });
+  
+  mainWindow.on('close', () => {
+    store.set('windowPosition', mainWindow.getPosition());
+  });
 }
 
-// IPC para controles de ventana
 ipcMain.on('window-close', () => mainWindow?.close());
 ipcMain.on('window-minimize', () => mainWindow?.minimize());
-ipcMain.on('window-toggle-maximize', () => {
-  if (mainWindow?.isMaximized()) mainWindow.unmaximize();
-  else mainWindow?.maximize();
-});
-ipcMain.on('open-devtools', () => mainWindow?.webContents.openDevTools({ mode: 'detach' }));
-
-// Manejar estado de "fijado" (persistir y aplicar alwaysOnTop)
 ipcMain.on('set-pin-status', (_, status) => {
   store.set('isPinned', !!status);
   if (mainWindow) mainWindow.setAlwaysOnTop(!!status);
 });
 
-ipcMain.handle('get-pin-status', () => {
-  return store.get('isPinned', false) || false;
-});
+ipcMain.handle('get-pin-status', () => store.get('isPinned', false));
 
-// Ciclo de vida de la app
 app.whenReady().then(createWindow);
 
 app.on('window-all-closed', () => {

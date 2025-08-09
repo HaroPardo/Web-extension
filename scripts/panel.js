@@ -1,8 +1,6 @@
-// panel.js
 document.addEventListener('DOMContentLoaded', () => {
   const closeBtn = document.getElementById('close-btn');
   const minimizeBtn = document.getElementById('minimize-btn');
-  const maximizeBtn = document.getElementById('maximize-btn');
   const pinBtn = document.getElementById('pin-btn');
   const webview = document.getElementById('whatsapp-tab');
   const winAPI = window.electronAPI || null;
@@ -10,8 +8,6 @@ document.addEventListener('DOMContentLoaded', () => {
   let isPinned = false;
   let inStartupGrace = true;
   setTimeout(() => { inStartupGrace = false; }, 2000);
-
-  let webviewReady = false;
 
   if (winAPI?.getPinStatus) {
     winAPI.getPinStatus().then(status => {
@@ -22,7 +18,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
   closeBtn?.addEventListener('click', () => winAPI?.close());
   minimizeBtn?.addEventListener('click', () => winAPI?.minimize());
-  maximizeBtn?.addEventListener('click', () => winAPI?.toggleMaximize());
 
   function updatePinButton() {
     if (!pinBtn) return;
@@ -38,36 +33,61 @@ document.addEventListener('DOMContentLoaded', () => {
 
   if (!webview) return;
 
-  const mobileUA = 'Mozilla/5.0 (Linux; Android 10; SM-G981B) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Mobile Safari/537.36';
+  // User-Agent actualizado (Chrome 125 - compatible con WhatsApp)
+  const desktopUA = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36';
+  
   webview.src = 'https://web.whatsapp.com/?t=' + Date.now();
-  webview.setAttribute('useragent', mobileUA);
+  webview.setAttribute('useragent', desktopUA);
 
-  function resizeWebview() {
-    if (!webviewReady) return;
-    webview.style.width = '100%';
-    webview.style.height = '100%';
-  }
-
-  const wrap = document.querySelector('.webview-wrap');
-  new ResizeObserver(resizeWebview).observe(wrap);
+  // Configuración esencial para WhatsApp
+  webview.setAttribute('allowpopups', 'on');
+  webview.setAttribute('allowfullscreen', 'on');
+  webview.setAttribute('allowmediacapture', 'on');
+  webview.setAttribute('allowcamera', 'on');
+  webview.setAttribute('allowmicrophone', 'on');
 
   webview.addEventListener('did-finish-load', () => {
-    webviewReady = true;
-    resizeWebview();
+    // Detectar y solucionar mensaje de navegador no soportado
+    webview.executeJavaScript(`
+      if (document.body.innerText.includes("browser isn't supported")) {
+        location.reload();
+      }
+    `);
   });
 
   webview.addEventListener('dom-ready', async () => {
-    webviewReady = true;
-    resizeWebview();
-
+    // CSS para forzar el modo móvil
     await webview.insertCSS(`
-      html, body, #app, .app, .app-wrapper, .two-col, .app-root {
+      * {
+        -webkit-user-select: none !important;
+        user-select: none !important;
+      }
+      
+      html, body, #app, .app, .app-wrapper {
         height: 100% !important;
         margin: 0 !important;
         padding: 0 !important;
         overflow: hidden !important;
       }
+      
+      /* Ocultar barra de navegación de WhatsApp */
+      ._1WZqU, ._3j7s9 {
+        display: none !important;
+      }
     `);
+    
+    // Solicitar permisos necesarios
+    webview.executeJavaScript(`
+      Notification.requestPermission();
+      navigator.mediaDevices.getUserMedia({ audio: true, video: false });
+    `);
+  });
+
+  // Manejar solicitudes de permisos
+  webview.addEventListener('permissionrequest', (e) => {
+    if (['media', 'geolocation', 'notifications'].includes(e.permission)) {
+      e.request.allow();
+    }
   });
 
   window.addEventListener('blur', () => {
