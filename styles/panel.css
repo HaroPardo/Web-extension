@@ -14,12 +14,15 @@ html, body, #app {
 /* Contenedor principal */
 #app {
   display: flex;
+  flex-direction: column; /* columna para que header, webview y botón se apilen */
   height: 100vh;
+  width: 400px; /* ancho fijo del sidebar */
+  overflow: hidden;
 }
 
-/* SIDEBAR (fijo a la izquierda) */
+/* SIDEBAR (todo el contenido de la app) */
 .sidebar {
-  width: 400px;
+  flex: 1;
   display: flex;
   flex-direction: column;
   background: #1e1f29;
@@ -61,21 +64,23 @@ html, body, #app {
   background: rgba(255,255,255,0.04); 
 }
 
-/* Wrapper del webview - CRÍTICO */
+/* Wrapper del webview */
 .webview-wrap {
   flex: 1;
   display: flex;
-  min-height: 0;
+  flex-direction: column;
+  min-height: 0; /* evita que se corte el contenido */
   position: relative;
 }
 
-/* El webview debe ocupar TODO el espacio */
+/* Webview ocupa todo el espacio */
 #whatsapp-tab {
-  flex: 1;
+  flex: 1 1 auto;
   width: 100%;
   height: 100%;
   display: block;
   border: none;
+  min-height: 0;
   z-index: 10;
 }
 
@@ -97,25 +102,10 @@ html, body, #app {
   background: #43b581;
 }
 
-/* Área principal derecha */
-.main-area {
-  flex: 1;
-  overflow: auto;
-  background: linear-gradient(180deg, #0b0b0d, #101216);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 20px;
-}
+/* Ocultar área principal que no usamos */
+.main-area { display: none !important; }
 
 /* Responsive */
 @media (max-width: 700px) { 
-  .sidebar { 
-    width: 320px; 
-  } 
+  #app { width: 320px; } 
 }
-/* Forzar que la app sea solo la barra lateral */
-.main-area { display: none !important; }
-
-/* Asegurarse de que #app no crezca más que la sidebar */
-#app { width: 400px; height: 100vh; overflow: hidden; }
