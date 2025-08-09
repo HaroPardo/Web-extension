@@ -99,6 +99,21 @@ document.addEventListener('DOMContentLoaded', () => {
       ._1WZqU, ._3j7s9 {
         height: 100vh !important;
       }
+      
+      /* Permitir que WhatsApp se adapte a cualquier ancho */
+      .app-wrapper, .two, ._1WZqU {
+        width: 100% !important;
+        max-width: none !important;
+      }
+      
+      ._2Ts6i {
+        min-width: auto !important;
+      }
+      
+      ._1qNwV {
+        padding-left: 10px !important;
+        padding-right: 10px !important;
+      }
     `);
     
     // Forzar características de Chrome

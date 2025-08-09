@@ -2,7 +2,6 @@ const path = require('path');
 const { app, BrowserWindow, ipcMain, screen } = require('electron');
 const ElectronStore = require('electron-store');
 
-// Configurar user-agent global para Chrome
 app.userAgentFallback = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/138.0.0.0 Safari/537.36';
 
 app.disableHardwareAcceleration();
@@ -14,19 +13,18 @@ function createWindow() {
   const primaryDisplay = screen.getPrimaryDisplay();
   const { width, height } = primaryDisplay.workAreaSize;
   
-  const winWidth = 400;
-  const winHeight = 800;
-  const x = 0;
-  const y = Math.floor((height - winHeight) / 2);
+  // Usar tamaño guardado o valores predeterminados
+  const savedSize = store.get('windowSize', { width: 520, height: 800 });
+  const savedPosition = store.get('windowPosition', { x: 0, y: Math.floor((height - 800) / 2) });
 
   mainWindow = new BrowserWindow({
-    width: winWidth,
-    height: winHeight,
-    x: x,
-    y: y,
-    minWidth: 300,
-    minHeight: 600,
-    resizable: false,
+    width: savedSize.width,
+    height: savedSize.height,
+    x: savedPosition.x,
+    y: savedPosition.y,
+    minWidth: 300,  // Ancho mínimo
+    minHeight: 600, // Alto mínimo
+    resizable: true, // ¡Habilitar redimensión!
     maximizable: false,
     frame: false,
     movable: true,
@@ -38,7 +36,6 @@ function createWindow() {
       plugins: true,
       webSecurity: true,
       allowRunningInsecureContent: false,
-      // Habilitar características experimentales
       experimentalFeatures: true,
       enableBlinkFeatures: 'OverlayScrollbars'
     }
@@ -60,7 +57,17 @@ function createWindow() {
     return url.startsWith('https://web.whatsapp.com/') ? { action: 'allow' } : { action: 'deny' };
   });
   
+  // Guardar tamaño y posición al cambiar o cerrar
+  mainWindow.on('resize', () => {
+    store.set('windowSize', mainWindow.getSize());
+  });
+  
+  mainWindow.on('move', () => {
+    store.set('windowPosition', mainWindow.getPosition());
+  });
+  
   mainWindow.on('close', () => {
+    store.set('windowSize', mainWindow.getSize());
     store.set('windowPosition', mainWindow.getPosition());
   });
 }

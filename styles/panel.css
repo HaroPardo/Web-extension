@@ -11,12 +11,12 @@ html, body, #app {
   overflow: hidden;
 }
 
-/* Contenedor principal */
+/* Contenedor principal - ahora ocupa el 100% del ancho de la ventana */
 #app {
   display: flex;
   flex-direction: column;
   height: 100vh;
-  width: 400px;
+  width: 100%; /* Cambiado a 100% */
   overflow: hidden;
 }
 
@@ -59,7 +59,7 @@ html, body, #app {
   min-height: 0;
 }
 
-/* Webview */
+/* Webview - se adapta automáticamente al contenedor */
 #whatsapp-tab {
   flex: 1 1 auto;
   width: 100%;
@@ -89,7 +89,4 @@ html, body, #app {
 /* Ocultar área principal */
 .main-area { display: none !important; }
 
-/* Responsive */
-@media (max-width: 700px) { 
-  #app { width: 320px; } 
-}
+/* Eliminamos la media query de responsive porque ahora es redimensionable */
