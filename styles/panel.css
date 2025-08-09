@@ -1,64 +1,121 @@
-.sidebar {
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 400px;
+/* Reset y layout global */
+* { box-sizing: border-box; }
+html, body, #app {
   height: 100%;
+  width: 100%;
+  margin: 0;
+  padding: 0;
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, Arial;
+  background: #0b0b0d;
+  color: #ddd;
   overflow: hidden;
-  background: #1e1f29;
+}
+
+/* Contenedor principal */
+#app {
+  display: flex;
+  height: 100vh;
+}
+
+/* SIDEBAR (fijo a la izquierda) */
+.sidebar {
+  width: 400px;
   display: flex;
   flex-direction: column;
-  z-index: 9999;
+  background: #1e1f29;
+  z-index: 20;
   box-shadow: 3px 0 10px rgba(0,0,0,0.5);
+  height: 100%;
 }
 
-.tab-buttons {
+/* Header (arrastrable) */
+.sidebar .header {
+  height: 44px;
   display: flex;
-  padding: 10px;
+  align-items: center;
+  justify-content: flex-end;
   background: #2a2b3a;
+  -webkit-app-region: drag;
+  padding: 6px;
+  z-index: 25;
+  flex-shrink: 0;
 }
 
-.tab-btn {
-  flex: 1;
-  padding: 8px;
-  margin: 0 5px;
-  background: #43445a;
-  color: white;
+/* Botones de control */
+.window-controls { 
+  display: flex; 
+  gap: 6px; 
+}
+.window-controls button {
+  -webkit-app-region: no-drag;
+  background: transparent;
   border: none;
-  border-radius: 4px;
+  color: #fff;
+  font-size: 15px;
+  padding: 6px 8px;
+  border-radius: 6px;
   cursor: pointer;
+  z-index: 30;
+}
+.window-controls button:hover { 
+  background: rgba(255,255,255,0.04); 
 }
 
-.tab-btn.active {
-  background: #25D366;
-}
-
-.tab-btn[data-tab="discord"].active {
-  background: #7289DA;
-}
-
-.tab-content {
+/* Wrapper del webview - CRÍTICO */
+.webview-wrap {
   flex: 1;
-  display: none;
-  border: none;
-  height: calc(100vh - 120px);
+  display: flex;
+  min-height: 0;
+  position: relative;
 }
 
-.tab-content.active {
-  display: block;
-}
-
-#pin-btn {
-  background: #7289da;
-  color: white;
-  border: none;
-  padding: 10px;
-  cursor: pointer;
-  margin-top: 5px;
-}
-
-webview {
+/* El webview debe ocupar TODO el espacio */
+#whatsapp-tab {
+  flex: 1;
   width: 100%;
   height: 100%;
   display: block;
+  border: none;
+  z-index: 10;
 }
+
+/* Botón pin al final */
+#pin-btn {
+  margin: 8px 12px;
+  padding: 8px 10px;
+  border: none;
+  border-radius: 10px;
+  background: #7289da;
+  color: white;
+  cursor: pointer;
+  -webkit-app-region: no-drag;
+  z-index: 30;
+  flex-shrink: 0;
+}
+
+#pin-btn.fijado {
+  background: #43b581;
+}
+
+/* Área principal derecha */
+.main-area {
+  flex: 1;
+  overflow: auto;
+  background: linear-gradient(180deg, #0b0b0d, #101216);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+
+/* Responsive */
+@media (max-width: 700px) { 
+  .sidebar { 
+    width: 320px; 
+  } 
+}
+/* Forzar que la app sea solo la barra lateral */
+.main-area { display: none !important; }
+
+/* Asegurarse de que #app no crezca más que la sidebar */
+#app { width: 400px; height: 100vh; overflow: hidden; }
