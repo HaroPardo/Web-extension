@@ -20,6 +20,7 @@ document.addEventListener('DOMContentLoaded', () => {
     winAPI.getPinStatus().then(status => {
       isPinned = status;
       updatePinButton();
+      updateBlurModeButtons(); // Actualizar botones de comportamiento
     });
   }
 
@@ -43,27 +44,44 @@ document.addEventListener('DOMContentLoaded', () => {
   function updateBlurModeButtons() {
     if (!minimizeOnBlurBtn || !closeOnBlurBtn) return;
     
+    // Si está fijado, mostrar botones sin checkmarks
+    if (isPinned) {
+      minimizeOnBlurBtn.classList.remove('active');
+      minimizeOnBlurBtn.innerHTML = 'Minimizar ⤵️';
+      closeOnBlurBtn.classList.remove('active');
+      closeOnBlurBtn.innerHTML = 'Cerrar ❌';
+      return;
+    }
+    
+    // Si no está fijado, mostrar modo activo con checkmark
     if (blurMode === 'minimize') {
       minimizeOnBlurBtn.classList.add('active');
+      minimizeOnBlurBtn.innerHTML = 'Minimizar ⤵️ <span class="checkmark">✓</span>';
       closeOnBlurBtn.classList.remove('active');
+      closeOnBlurBtn.innerHTML = 'Cerrar ❌';
     } else {
       minimizeOnBlurBtn.classList.remove('active');
+      minimizeOnBlurBtn.innerHTML = 'Minimizar ⤵️';
       closeOnBlurBtn.classList.add('active');
+      closeOnBlurBtn.innerHTML = 'Cerrar ❌ <span class="checkmark">✓</span>';
     }
   }
 
   pinBtn?.addEventListener('click', () => {
     isPinned = !isPinned;
     updatePinButton();
+    updateBlurModeButtons(); // Actualizar botones de comportamiento
   });
 
   minimizeOnBlurBtn?.addEventListener('click', () => {
+    if (isPinned) return; // No hacer nada si está fijado
     blurMode = 'minimize';
     winAPI?.setBlurMode?.(blurMode);
     updateBlurModeButtons();
   });
 
   closeOnBlurBtn?.addEventListener('click', () => {
+    if (isPinned) return; // No hacer nada si está fijado
     blurMode = 'close';
     winAPI?.setBlurMode?.(blurMode);
     updateBlurModeButtons();

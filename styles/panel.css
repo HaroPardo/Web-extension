@@ -11,7 +11,7 @@ html, body, #app {
   overflow: hidden;
 }
 
-/* Contenedor principal - ahora con ancho fijo por defecto */
+/* Contenedor principal */
 #app {
   display: flex;
   flex-direction: column;
@@ -54,28 +54,19 @@ html, body, #app {
   background: rgba(255,255,255,0.04); 
 }
 
+/* Estilos para los checkmarks */
+.window-controls .checkmark {
+  margin-left: 5px;
+  color: #4CAF50; /* Verde */
+  font-weight: bold;
+  display: inline-block;
+}
+
 /* Botones activos */
 .window-controls button.active {
-  background: rgba(255, 255, 255, 0.2);
+  background: rgba(76, 175, 80, 0.2);
+  border: 1px solid #4CAF50;
   box-shadow: inset 0 0 3px rgba(0,0,0,0.5);
-}
-
-/* Wrapper del webview */
-.webview-wrap {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  min-height: 0;
-}
-
-/* Webview */
-#whatsapp-tab {
-  flex: 1 1 auto;
-  width: 100%;
-  height: 100%;
-  display: block;
-  border: none;
-  min-height: 0;
 }
 
 /* Botón pin */
@@ -101,10 +92,28 @@ html, body, #app {
   font-size: 14px;
 }
 
+/* Webview wrapper */
+.webview-wrap {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+/* Webview */
+#whatsapp-tab {
+  flex: 1 1 auto;
+  width: 100%;
+  height: 100%;
+  display: block;
+  border: none;
+  min-height: 0;
+}
+
 /* Ocultar área principal */
 .main-area { display: none !important; }
 
-/* Responsive para pantallas pequeñas */
+/* Responsive */
 @media (max-width: 700px) { 
   #app { width: 320px; } 
   .window-controls button {
