@@ -1,220 +1,126 @@
 document.addEventListener('DOMContentLoaded', () => {
-  // Detectar si estamos en entorno empaquetado
-  const isPackaged = window.process && window.process.resourcesPath !== undefined;
+  const isPackaged = window.process?.resourcesPath !== undefined;
   
+  // UI element references
   const closeBtn = document.getElementById('close-btn');
   const minimizeBtn = document.getElementById('minimize-btn');
   const pinBtn = document.getElementById('pin-btn');
   const minimizeOnBlurBtn = document.getElementById('minimize-on-blur-btn');
   const closeOnBlurBtn = document.getElementById('close-on-blur-btn');
   const webview = document.getElementById('whatsapp-tab');
-  const winAPI = window.electronAPI || null;
+  const winAPI = window.electronAPI || null;  // Preload-safe access
 
+  // State variables
   let isPinned = false;
-  let blurMode = 'minimize'; // Modo por defecto
-  let inStartupGrace = true;
-  setTimeout(() => { inStartupGrace = false; }, 2000);
-
-  // Obtener estados guardados
-  if (winAPI?.getPinStatus) {
-    winAPI.getPinStatus().then(status => {
-      isPinned = status;
-      updatePinButton();
-      updateBlurModeButtons(); // Actualizar botones de comportamiento
-    });
-  }
-
-  if (winAPI?.getBlurMode) {
-    winAPI.getBlurMode().then(mode => {
-      blurMode = mode;
-      updateBlurModeButtons();
-    });
-  }
-
-  closeBtn?.addEventListener('click', () => winAPI?.close());
-  minimizeBtn?.addEventListener('click', () => winAPI?.minimize());
-
-  function updatePinButton() {
+  let blurMode = 'minimize';
+  
+  // Initialize UI from persisted state
+  const initFromStorage = async () => {
+    if (!winAPI) return;
+    
+    isPinned = await winAPI.getPinStatus();
+    blurMode = await winAPI.getBlurMode();
+    
+    updatePinButton();
+    updateBlurModeButtons();
+  };
+  
+  // Update pin button visual state
+  const updatePinButton = () => {
     if (!pinBtn) return;
-    pinBtn.textContent = isPinned ? '✅ Fijado' : '📌 Fijar';
-    pinBtn.classList.toggle('fijado', isPinned);
+    pinBtn.textContent = isPinned ? '✅ Pinned' : '📌 Pin';
+    pinBtn.classList.toggle('pinned', isPinned);
     winAPI?.setPinStatus?.(isPinned);
-  }
+  };
 
-  function updateBlurModeButtons() {
+  // Update behavior mode buttons
+  const updateBlurModeButtons = () => {
     if (!minimizeOnBlurBtn || !closeOnBlurBtn) return;
     
-    // Si está fijado, mostrar botones sin checkmarks
-    if (isPinned) {
-      minimizeOnBlurBtn.classList.remove('active');
-      minimizeOnBlurBtn.innerHTML = 'Minimizar ⤵️';
-      closeOnBlurBtn.classList.remove('active');
-      closeOnBlurBtn.innerHTML = 'Cerrar ❌';
-      return;
-    }
+    // Clear all active states
+    minimizeOnBlurBtn.classList.remove('active');
+    closeOnBlurBtn.classList.remove('active');
     
-    // Si no está fijado, mostrar modo activo con checkmark
-    if (blurMode === 'minimize') {
-      minimizeOnBlurBtn.classList.add('active');
-      minimizeOnBlurBtn.innerHTML = 'Minimizar ⤵️ <span class="checkmark">✓</span>';
-      closeOnBlurBtn.classList.remove('active');
-      closeOnBlurBtn.innerHTML = 'Cerrar ❌';
-    } else {
-      minimizeOnBlurBtn.classList.remove('active');
-      minimizeOnBlurBtn.innerHTML = 'Minimizar ⤵️';
-      closeOnBlurBtn.classList.add('active');
-      closeOnBlurBtn.innerHTML = 'Cerrar ❌ <span class="checkmark">✓</span>';
+    // Apply mode-specific UI
+    if (!isPinned) {
+      const activeButton = blurMode === 'minimize' 
+        ? minimizeOnBlurBtn 
+        : closeOnBlurBtn;
+      
+      activeButton.classList.add('active');
+      activeButton.innerHTML = `${activeButton.textContent.replace(/✓/g, '')} <span class="checkmark">✓</span>`;
     }
-  }
+  };
 
+  // Event bindings
+  closeBtn?.addEventListener('click', () => winAPI?.close());
+  minimizeBtn?.addEventListener('click', () => winAPI?.minimize());
+  
   pinBtn?.addEventListener('click', () => {
     isPinned = !isPinned;
     updatePinButton();
-    updateBlurModeButtons(); // Actualizar botones de comportamiento
+    updateBlurModeButtons();
   });
 
   minimizeOnBlurBtn?.addEventListener('click', () => {
-    if (isPinned) return; // No hacer nada si está fijado
+    if (isPinned) return;
     blurMode = 'minimize';
     winAPI?.setBlurMode?.(blurMode);
     updateBlurModeButtons();
   });
 
   closeOnBlurBtn?.addEventListener('click', () => {
-    if (isPinned) return; // No hacer nada si está fijado
+    if (isPinned) return;
     blurMode = 'close';
     winAPI?.setBlurMode?.(blurMode);
     updateBlurModeButtons();
   });
 
-  if (!webview) return;
+  // Configure WhatsApp webview
+  if (webview) {
+    const chromeUA = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/138.0.0.0 Safari/537.36';
+    webview.src = 'https://web.whatsapp.com/?t=' + Date.now();  // Cache busting
+    webview.setAttribute('useragent', chromeUA);
 
-  // User-Agent actualizado para Chrome 138 (última versión)
-  const chromeUA = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/138.0.0.0 Safari/537.36';
-  
-  webview.src = 'https://web.whatsapp.com/?t=' + Date.now();
-  webview.setAttribute('useragent', chromeUA);
+    // Permission flags for media access
+    ['allowpopups', 'allowfullscreen', 'allowmediacapture', 'allowcamera', 'allowmicrophone']
+      .forEach(attr => webview.setAttribute(attr, 'on'));
 
-  // Configuración esencial para WhatsApp
-  webview.setAttribute('allowpopups', 'on');
-  webview.setAttribute('allowfullscreen', 'on');
-  webview.setAttribute('allowmediacapture', 'on');
-  webview.setAttribute('allowcamera', 'on');
-  webview.setAttribute('allowmicrophone', 'on');
-
-  // Solución definitiva para el error de compatibilidad
-  webview.addEventListener('did-finish-load', () => {
-    // Detectar y solucionar mensaje de navegador no soportado
-    webview.executeJavaScript(`
-      // 1. Verificar si aparece el mensaje de error
-      const errorMsg = document.querySelector('body')?.innerText?.includes("browser isn't supported");
-      
-      // 2. Si hay error, forzar la compatibilidad
-      if (errorMsg) {
-        // Eliminar mensaje de error
-        document.querySelector('body').innerHTML = '';
-        
-        // Forzar compatibilidad con Chrome
-        Object.defineProperty(navigator, 'userAgent', {
-          value: '${chromeUA}',
-          configurable: false,
-          writable: false
-        });
-        
-        // Recargar WhatsApp
-        location.reload();
-      }
-      
-      // 3. Devolver estado para depuración
-      errorMsg;
-    `).then((needsReload) => {
-      if (needsReload) {
-        console.log('WhatsApp reloaded with Chrome compatibility fix');
-      }
+    // Browser compatibility workaround
+    webview.addEventListener('did-finish-load', () => {
+      webview.executeJavaScript(`
+        if (document.body.innerText.includes("browser isn't supported")) {
+          Object.defineProperty(navigator, 'userAgent', {
+            value: '${chromeUA}',
+            configurable: false
+          });
+          location.reload();
+        }
+      `);
     });
-  });
 
-  webview.addEventListener('dom-ready', async () => {
-    // Obtener la ruta base para los recursos
-    const basePath = isPackaged 
-      ? `file://${window.process.resourcesPath}`
-      : '';
-    
-    // CSS para forzar compatibilidad
-    await webview.insertCSS(`
-      /* Importar nuestro CSS principal */
-      @import url("${basePath}/styles/panel.css");
+    // Inject custom CSS
+    webview.addEventListener('dom-ready', async () => {
+      const basePath = isPackaged 
+        ? `file://${window.process.resourcesPath}`
+        : '';
       
-      /* Ocultar mensaje de incompatibilidad */
-      .browser-not-supported {
-        display: none !important;
-      }
-      
-      /* Forzar diseño responsive */
-      html, body, #app, .app, .app-wrapper {
-        height: 100% !important;
-        width: 100% !important;
-        margin: 0 !important;
-        padding: 0 !important;
-        overflow: hidden !important;
-      }
-      
-      /* Ajustes específicos para WhatsApp */
-      ._1WZqU, ._3j7s9 {
-        height: 100vh !important;
-      }
-      
-      /* Permitir que WhatsApp se adapte a cualquier ancho */
-      .app-wrapper, .two, ._1WZqU {
-        width: 100% !important;
-        max-width: none !important;
-      }
-      
-      ._2Ts6i {
-        min-width: auto !important;
-      }
-      
-      ._1qNwV {
-        padding-left: 10px !important;
-        padding-right: 10px !important;
-      }
-    `);
-    
-    // Forzar características de Chrome
-    webview.executeJavaScript(`
-      // Simular Chrome completamente
-      window.chrome = {
-        app: { isInstalled: true },
-        runtime: {},
-        storage: {},
-        tabs: {},
-        webstore: {}
-      };
-      
-      // Habilitar todas las características
-      Object.defineProperty(navigator, 'plugins', {
-        value: [{
-          name: 'Chrome PDF Plugin',
-          filename: 'internal-pdf-viewer'
-        }],
-        configurable: false
-      });
-      
-      Object.defineProperty(navigator, 'languages', {
-        value: ['es-ES', 'es', 'en-US', 'en'],
-        configurable: false
-      });
-      
-      // Solicitar permisos necesarios
-      Notification.requestPermission();
-      navigator.mediaDevices.getUserMedia({ audio: true, video: false });
-    `);
-  });
+      await webview.insertCSS(`
+        @import url("${basePath}/styles/panel.css");
+        .browser-not-supported { display: none !important; }
+        /* Additional WhatsApp layout fixes */
+      `);
 
-  // Manejar solicitudes de permisos
-  webview.addEventListener('permissionrequest', (e) => {
-    if (['media', 'geolocation', 'notifications'].includes(e.permission)) {
-      e.request.allow();
-    }
-  });
+      // Polyfill Chrome APIs expected by WhatsApp
+      webview.executeJavaScript(`
+        window.chrome = { runtime: {}, storage: {} };
+        Object.defineProperty(navigator, 'plugins', { value: [{
+          name: 'Chrome PDF Plugin', filename: 'internal-pdf-viewer'
+        }]});
+      `);
+    });
+  }
+
+  // Initialize application
+  initFromStorage();
 });

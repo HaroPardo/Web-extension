@@ -2,35 +2,40 @@ const path = require('path');
 const { app, BrowserWindow, ipcMain, screen, Tray, Menu } = require('electron');
 const ElectronStore = require('electron-store');
 
+// Environment detection for resource loading
 const isPackaged = app.isPackaged;
 
+// Override user agent to prevent WhatsApp compatibility issues (Whatsapp only works on the 60 version or superior)
 app.userAgentFallback = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/138.0.0.0 Safari/537.36';
-app.disableHardwareAcceleration();
+app.disableHardwareAcceleration();  // Improve performance on low-end systems
 
 let mainWindow;
 let tray = null;
-const store = new ElectronStore();
+const store = new ElectronStore();  // Persistent configuration storage
 
-// Variable para controlar el cierre
+// State tracking for graceful shutdown
 app.isQuiting = false;
 
+// Behavior modes when window loses focus
 const BLUR_MODES = {
   MINIMIZE: 'minimize',
   CLOSE: 'close'
 };
 
+
 function createWindow() {
   const primaryDisplay = screen.getPrimaryDisplay();
   const { height } = primaryDisplay.workAreaSize;
   
+  // Default dimensions for initial launch
   const DEFAULT_WIDTH = 400;
   const DEFAULT_HEIGHT = 800;
   
+  // Retrieve stored window state or use defaults
   const savedSize = store.get('windowSize', { width: DEFAULT_WIDTH, height: DEFAULT_HEIGHT });
-  
   const savedPosition = store.get('windowPosition', { 
     x: 0, 
-    y: Math.floor((height - DEFAULT_HEIGHT) / 2)
+    y: Math.floor((height - DEFAULT_HEIGHT) / 2)  // Center vertically
   });
   
   const blurMode = store.get('blurMode', BLUR_MODES.MINIMIZE);
@@ -43,6 +48,7 @@ function createWindow() {
     ? path.join(process.resourcesPath, 'panel.html')
     : path.join(__dirname, 'panel.html');
 
+  // Window configuration with frameless design
   mainWindow = new BrowserWindow({
     width: savedSize.width,
     height: savedSize.height,
@@ -55,10 +61,10 @@ function createWindow() {
     frame: false,
     movable: true,
     backgroundColor: '#2a2b3a',
-    show: false, // No mostrar inmediatamente
+    show: false,
     webPreferences: {
       preload: preloadPath,
-      contextIsolation: true,
+      contextIsolation: true, 
       nodeIntegration: false,
       webviewTag: true,
       plugins: true,
@@ -69,11 +75,12 @@ function createWindow() {
     }
   });
 
-  // Mostrar ventana cuando esté lista
+  // Show window when rendering is complete
   mainWindow.once('ready-to-show', () => {
     mainWindow.show();
   });
 
+  // Permission whitelist for embedded content
   mainWindow.webContents.session.setPermissionRequestHandler((webContents, permission, callback) => {
     const allowedPermissions = ['media', 'geolocation', 'notifications', 'pointerLock'];
     callback(allowedPermissions.includes(permission));
@@ -84,36 +91,33 @@ function createWindow() {
 
   mainWindow.loadFile(htmlPath);
   
+  // Security: Restrict child windows to WhatsApp domain only
   mainWindow.webContents.setWindowOpenHandler(({ url }) => {
     return url.startsWith('https://web.whatsapp.com/') ? { action: 'allow' } : { action: 'deny' };
   });
   
-  mainWindow.on('resize', () => {
-    store.set('windowSize', mainWindow.getSize());
-  });
+  // Persist window state on resize/move
+  mainWindow.on('resize', () => store.set('windowSize', mainWindow.getSize()));
+  mainWindow.on('move', () => store.set('windowPosition', mainWindow.getPosition()));
   
-  mainWindow.on('move', () => {
-    store.set('windowPosition', mainWindow.getPosition());
-  });
   
-  // Manejar el cierre: si no es una salida real, ocultamos
+  // Window close handler - prevents actual close when not quitting
+
   mainWindow.on('close', (e) => {
     if (!app.isQuiting) {
       e.preventDefault();
       mainWindow.hide();
     }
-    // Guardar tamaño y posición
     store.set('windowSize', mainWindow.getSize());
     store.set('windowPosition', mainWindow.getPosition());
     return false;
   });
   
+  // Behavior on focus loss (minimize/hide based on settings)
   mainWindow.on('blur', () => {
-    const isPinned = store.get('isPinned', false);
+    if (store.get('isPinned', false)) return;  // Ignore if pinned
+    
     const blurMode = store.get('blurMode', BLUR_MODES.MINIMIZE);
-    
-    if (isPinned) return;
-    
     if (blurMode === BLUR_MODES.MINIMIZE) {
       mainWindow.minimize();
     } else if (blurMode === BLUR_MODES.CLOSE) {
@@ -121,30 +125,26 @@ function createWindow() {
     }
   });
   
-  // Solución para el bug de restauración
+  // Workaround for Electron window restoration bug
   mainWindow.on('restore', () => {
     const bounds = mainWindow.getBounds();
-    mainWindow.setBounds({ 
-      ...bounds, 
-      width: bounds.width + 1,
-      height: bounds.height + 1
-    });
+    mainWindow.setBounds({ ...bounds, width: bounds.width + 1, height: bounds.height + 1 });
     setTimeout(() => {
       mainWindow.setBounds(bounds);
       mainWindow.focus();
     }, 50);
   });
 
-  // Manejar clic en el icono de la bandeja
+  // Tray interaction handling
   mainWindow.on('show', () => {
     if (mainWindow.isMinimized()) mainWindow.restore();
     mainWindow.focus();
   });
 }
 
-// Crear bandeja del sistema
+ // Creates system tray icon with context menu
+
 function createTray() {
-  // Ruta al icono
   const iconPath = isPackaged 
     ? path.join(process.resourcesPath, 'icon.ico')
     : path.join(__dirname, 'icon.ico');
@@ -154,15 +154,11 @@ function createTray() {
     
     const contextMenu = Menu.buildFromTemplate([
       {
-        label: 'Abrir WhatsApp',
-        click: () => {
-          if (mainWindow.isMinimized()) mainWindow.restore();
-          mainWindow.show();
-          mainWindow.focus();
-        }
+        label: 'Open WhatsApp',
+        click: () => mainWindow.show()
       },
       {
-        label: 'Salir',
+        label: 'Exit',
         click: () => {
           app.isQuiting = true;
           app.quit();
@@ -173,55 +169,43 @@ function createTray() {
     tray.setToolTip('WhatsApp Sidebar');
     tray.setContextMenu(contextMenu);
     
-    // Comportamiento para clic simple (Windows)
     tray.on('click', () => {
       if (mainWindow.isMinimized()) mainWindow.restore();
-      if (mainWindow.isVisible()) {
-        mainWindow.hide();
-      } else {
-        mainWindow.show();
-        mainWindow.focus();
-      }
+      mainWindow.isVisible() ? mainWindow.hide() : mainWindow.show();
     });
     
-    // Comportamiento para doble clic (macOS/Linux)
     tray.on('double-click', () => {
       if (mainWindow.isMinimized()) mainWindow.restore();
       mainWindow.show();
-      mainWindow.focus();
     });
     
   } catch (error) {
-    console.error('Error creating tray:', error);
+    console.error('Tray creation failed:', error);
   }
 }
 
+// Application lifecycle management
 app.whenReady().then(() => {
   createWindow();
   createTray();
   
-  // Manejar activación de la app (especialmente en macOS)
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) createWindow();
   });
 });
 
+// IPC handlers for window management
 ipcMain.on('window-close', () => {
   app.isQuiting = true;
   mainWindow?.close();
 });
 
 ipcMain.on('window-minimize', () => mainWindow?.minimize());
-
 ipcMain.on('set-pin-status', (_, status) => {
   store.set('isPinned', !!status);
-  if (mainWindow) mainWindow.setAlwaysOnTop(!!status);
+  mainWindow?.setAlwaysOnTop(!!status);
 });
-
-ipcMain.on('set-blur-mode', (_, mode) => {
-  store.set('blurMode', mode);
-});
-
+ipcMain.on('set-blur-mode', (_, mode) => store.set('blurMode', mode));
 ipcMain.handle('get-pin-status', () => store.get('isPinned', false));
 ipcMain.handle('get-blur-mode', () => store.get('blurMode', BLUR_MODES.MINIMIZE));
 
