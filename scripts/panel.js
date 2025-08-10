@@ -1,18 +1,32 @@
 document.addEventListener('DOMContentLoaded', () => {
+  // Detectar si estamos en entorno empaquetado
+  const isPackaged = window.process && window.process.resourcesPath !== undefined;
+  
   const closeBtn = document.getElementById('close-btn');
   const minimizeBtn = document.getElementById('minimize-btn');
   const pinBtn = document.getElementById('pin-btn');
+  const minimizeOnBlurBtn = document.getElementById('minimize-on-blur-btn');
+  const closeOnBlurBtn = document.getElementById('close-on-blur-btn');
   const webview = document.getElementById('whatsapp-tab');
   const winAPI = window.electronAPI || null;
 
   let isPinned = false;
+  let blurMode = 'minimize'; // Modo por defecto
   let inStartupGrace = true;
   setTimeout(() => { inStartupGrace = false; }, 2000);
 
+  // Obtener estados guardados
   if (winAPI?.getPinStatus) {
     winAPI.getPinStatus().then(status => {
       isPinned = status;
       updatePinButton();
+    });
+  }
+
+  if (winAPI?.getBlurMode) {
+    winAPI.getBlurMode().then(mode => {
+      blurMode = mode;
+      updateBlurModeButtons();
     });
   }
 
@@ -26,9 +40,33 @@ document.addEventListener('DOMContentLoaded', () => {
     winAPI?.setPinStatus?.(isPinned);
   }
 
+  function updateBlurModeButtons() {
+    if (!minimizeOnBlurBtn || !closeOnBlurBtn) return;
+    
+    if (blurMode === 'minimize') {
+      minimizeOnBlurBtn.classList.add('active');
+      closeOnBlurBtn.classList.remove('active');
+    } else {
+      minimizeOnBlurBtn.classList.remove('active');
+      closeOnBlurBtn.classList.add('active');
+    }
+  }
+
   pinBtn?.addEventListener('click', () => {
     isPinned = !isPinned;
     updatePinButton();
+  });
+
+  minimizeOnBlurBtn?.addEventListener('click', () => {
+    blurMode = 'minimize';
+    winAPI?.setBlurMode?.(blurMode);
+    updateBlurModeButtons();
+  });
+
+  closeOnBlurBtn?.addEventListener('click', () => {
+    blurMode = 'close';
+    winAPI?.setBlurMode?.(blurMode);
+    updateBlurModeButtons();
   });
 
   if (!webview) return;
@@ -79,8 +117,16 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 
   webview.addEventListener('dom-ready', async () => {
+    // Obtener la ruta base para los recursos
+    const basePath = isPackaged 
+      ? `file://${window.process.resourcesPath}`
+      : '';
+    
     // CSS para forzar compatibilidad
     await webview.insertCSS(`
+      /* Importar nuestro CSS principal */
+      @import url("${basePath}/styles/panel.css");
+      
       /* Ocultar mensaje de incompatibilidad */
       .browser-not-supported {
         display: none !important;
@@ -152,9 +198,5 @@ document.addEventListener('DOMContentLoaded', () => {
     if (['media', 'geolocation', 'notifications'].includes(e.permission)) {
       e.request.allow();
     }
-  });
-
-  window.addEventListener('blur', () => {
-    if (!inStartupGrace && !isPinned) winAPI?.close();
   });
 });
