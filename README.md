@@ -2,51 +2,51 @@
 
 ## Key Features ✨
 
-- **Standalone WhatsApp Access** — Usa WhatsApp sin navegador ni la app oficial.
+- **Standalone WhatsApp Access** — Use WhatsApp without the browser or the official app.
 - **Smart Window Behaviors**:
-  - 📌 **Always On Top** — Mantén la ventana visible por encima de otras.
-  - ⤵️ **Minimize on Focus Loss** — Minimiza automáticamente al hacer click fuera (opcional).
-  - ❌ **Close on Focus Loss** — Oculta a la bandeja/sistema al perder foco (opcional).
-- **Persistent Sessions** — Mantente conectado entre sesiones.
-- **Lightweight** — Uso mínimo de recursos comparado con abrir WhatsApp en un navegador.
-- **Cross-Platform** — Funciona en Windows, macOS y Linux.
+  - 📌 **Always On Top** — Keep the window visible above others.
+  - ⤵️ **Minimize on Focus Loss** — Automatically minimize when clicking outside (optional).
+  - ❌ **Close on Focus Loss** — Hide to the system tray when losing focus (optional).
+- **Persistent Sessions** — Stay logged in between sessions.
+- **Lightweight** — Minimal resource usage compared to running WhatsApp in a browser.
+- **Cross-Platform** — Works on Windows, macOS, and Linux.
 
-## Instalación rápida
+## Quick Installation
 
-1. Descarga la carpeta `win-unpacked` desde los artefactos de build (si corresponde).
-2. En `win-unpacked` encontrarás todos los archivos del programa y el ejecutable `Social Sidebar.exe`.
-3. Para ejecutar la app en Windows, **haz doble click** en `Social Sidebar.exe`.
-
----
-
-## Uso / Guía rápida 🚀
-
-### Capturas (inclúyelas en el repo)
-
-![Instalación y ejecutable](styles/dist1.png)  
-**dist1.png** — Dentro de la carpeta `win-unpacked` están todos los archivos del programa. El archivo ejecutable principal es **`Social Sidebar.exe`**. Haz doble click en este `.exe` para iniciar la aplicación.
-
-![Interfaz y botón Pinned](styles/dist2.png)  
-**dist2.png** — Vista de la aplicación en ejecución. El botón aparece como **`Pinned`**, lo que indica que la ventana está en modo *siempre encima* (la aplicación se mantiene visible en el monitor mientras haces otras tareas).  
-
-- Si prefieres que al hacer click fuera de la ventana esta se minimice, usa el botón **Minimize**.  
-- Si quieres que la aplicación se oculte (por ejemplo si solo querías enviar un mensaje rápido) usa el botón **Close** para que deje de mostrarse o se envíe a la bandeja (según la configuración).
+1. Download the `win-unpacked` folder from the build artifacts (if applicable).
+2. Inside `win-unpacked` you will find all the program files and the main executable `Social Sidebar.exe`.
+3. To run the app on Windows, **double-click** `Social Sidebar.exe`.
 
 ---
 
-### Controles de la ventana
+## Usage Guide 🚀
 
-- **✕ Close Button**: Oculta la app en la bandeja del sistema (comportamiento por defecto / configurable).  
-- **— Minimize Button**: Minimiza la ventana a la barra de tareas.  
+### Screenshots (included in the repo)
+
+![Installation and executable](styles/dist1.png)  
+**dist1.png** — Inside the `win-unpacked` folder you will find all the files for the program. The main executable file is **`Social Sidebar.exe`**. Double-click this `.exe` to start the application.
+
+![Interface and Pinned button](styles/dist2.png)  
+**dist2.png** — View of the application while running. The button shows **`Pinned`**, meaning the window is in *always on top* mode (the app stays visible on your screen while you perform other tasks).  
+
+- If you prefer the window to minimize when clicking outside it, press the **Minimize** button.  
+- If you want the app to stop showing when clicking outside (for example, if you just wanted to send a quick message), press the **Close** button to hide it or send it to the tray (depending on your configuration).
+
+---
+
+### Window Controls
+
+- **✕ Close Button**: Hides the app to the system tray (default/configurable behavior).  
+- **— Minimize Button**: Minimizes the window to the taskbar.  
 - **📌 Pin Toggle**:
-  - **Estado por defecto — `Pin`**: La aplicación no está fijada (comportamiento normal).  
-  - **Estado activo — `Pinned`**: La ventana permanece **siempre encima** de las demás ventanas.
+  - **Default — `Pin`**: The app is not fixed (normal behavior).  
+  - **Active — `Pinned`**: The window stays **always on top** of other windows.
 
-### Selectores de comportamiento (al perder el foco)
-Estas opciones definen qué pasa cuando haces click fuera de la ventana:
+### Focus Loss Behaviors
+These options define what happens when you click outside the window:
 
 ```plaintext
-"Minimize ⤵️" : Minimiza la ventana al hacer click fuera.
-"Close ❌"    : Oculta la aplicación (p. ej. a la bandeja) al hacer click fuera.
-"None"        : No hacer nada al perder el foco (útil con Pinned).
+"Minimize ⤵️" : Minimizes the window when clicking outside.
+"Close ❌"    : Hides the application (e.g., to the system tray) when clicking outside.
+"None"        : Do nothing when focus is lost (useful with Pinned).
 
