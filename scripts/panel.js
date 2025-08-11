@@ -1,6 +1,6 @@
 document.addEventListener('DOMContentLoaded', () => {
   const isPackaged = window.process?.resourcesPath !== undefined;
-
+  
   // UI element references
   const closeBtn = document.getElementById('close-btn');
   const minimizeBtn = document.getElementById('minimize-btn');
@@ -21,73 +21,93 @@ document.addEventListener('DOMContentLoaded', () => {
   // Initialize UI from persisted state
   const initFromStorage = async () => {
     if (!winAPI) return;
-
-    isPinned = await winAPI.getPinStatus();
-    blurMode = await winAPI.getBlurMode();
-
+    try {
+      isPinned = await winAPI.getPinStatus();
+      blurMode = await winAPI.getBlurMode();
+    } catch (e) {
+      // si preload no responde, conservamos valores por defecto
+      isPinned = !!isPinned;
+      blurMode = blurMode || 'minimize';
+    }
     updatePinButton();
     updateBlurModeButtons();
   };
-
-  // Update pin button visual state
+  
+  // Update pin button visual state (y persistir)
   const updatePinButton = () => {
     if (!pinBtn) return;
     pinBtn.textContent = isPinned ? '✅ Pinned' : '📌 Pin';
     pinBtn.classList.toggle('pinned', isPinned);
     winAPI?.setPinStatus?.(isPinned);
+    // Si está pinned, ocultamos checkmarks en blur buttons
+    updateBlurModeButtons();
   };
 
-  // Update behavior mode buttons
+  // Render blur-mode buttons (asegura que solo uno tenga tick y respeta pinned)
   const updateBlurModeButtons = () => {
     if (!minimizeOnBlurBtn || !closeOnBlurBtn) return;
 
-    // Clear all active states
+    // Reset labels (evita duplicar checkmarks)
     minimizeOnBlurBtn.classList.remove('active');
     closeOnBlurBtn.classList.remove('active');
+    minimizeOnBlurBtn.innerHTML = 'Minimize ⤵️';
+    closeOnBlurBtn.innerHTML = 'Close ❌';
 
-    // Apply mode-specific UI
-    if (!isPinned) {
-      const activeButton = blurMode === 'minimize' 
-        ? minimizeOnBlurBtn 
-        : closeOnBlurBtn;
+    // Si está pinned, no mostramos checkmarks en los botones de blur
+    if (isPinned) return;
 
-      activeButton.classList.add('active');
-      activeButton.innerHTML = `${activeButton.textContent.replace(/✓/g, '')} <span class="checkmark">✓</span>`;
+    // Mostrar checkmark solo en el modo activo
+    if (blurMode === 'minimize') {
+      minimizeOnBlurBtn.classList.add('active');
+      minimizeOnBlurBtn.innerHTML += ' <span class="checkmark">✓</span>';
+    } else if (blurMode === 'close') {
+      closeOnBlurBtn.classList.add('active');
+      closeOnBlurBtn.innerHTML += ' <span class="checkmark">✓</span>';
     }
   };
 
-  // Event bindings
+  // Event bindings (ventana)
   closeBtn?.addEventListener('click', () => winAPI?.close());
   minimizeBtn?.addEventListener('click', () => winAPI?.minimize());
-
+  
+  // Pin toggle: si activas pin quitamos ticks de blur (se persiste)
   pinBtn?.addEventListener('click', () => {
     isPinned = !isPinned;
+    winAPI?.setPinStatus?.(isPinned);
+    updatePinButton();
+  });
+
+  // Minimizar en blur: al elegirlo se quita pinned y se establece el modo
+  minimizeOnBlurBtn?.addEventListener('click', () => {
+    if (isPinned) {
+      isPinned = false;
+      winAPI?.setPinStatus?.(false);
+    }
+    blurMode = 'minimize';
+    winAPI?.setBlurMode?.(blurMode);
     updatePinButton();
     updateBlurModeButtons();
   });
 
-  minimizeOnBlurBtn?.addEventListener('click', () => {
-    if (isPinned) return;
-    blurMode = 'minimize';
-    winAPI?.setBlurMode?.(blurMode);
-    updateBlurModeButtons();
-  });
-
+  // Cerrar en blur: similar al anterior
   closeOnBlurBtn?.addEventListener('click', () => {
-    if (isPinned) return;
+    if (isPinned) {
+      isPinned = false;
+      winAPI?.setPinStatus?.(false);
+    }
     blurMode = 'close';
     winAPI?.setBlurMode?.(blurMode);
+    updatePinButton();
     updateBlurModeButtons();
   });
 
-  // Reset session button
+  // Reset session button -> limpia la partición persist:whatsapp desde main
   resetBtn?.addEventListener('click', async () => {
     setStatus('Reseteando sesión...', true);
     const res = await winAPI.clearWhatsappSession();
     if (res?.ok) {
       setStatus('Sesión reseteada. Recargando...', true);
-      // recargar el webview
-      if (webview) webview.loadURL('https://web.whatsapp.com/?t=' + Date.now());
+      try { webview.loadURL('https://web.whatsapp.com/?t=' + Date.now()); } catch(e){}
       hideStatusAfter(4000);
     } else {
       setStatus('No se pudo resetear: ' + (res?.error || 'error desconocido'));
@@ -105,66 +125,84 @@ document.addEventListener('DOMContentLoaded', () => {
     setTimeout(() => { if (statusMsg) statusMsg.style.display = 'none'; }, ms);
   }
 
-  // Configure WhatsApp webview
+  // -------------------------------------------------------------------------
+  // Webview configuration and QR detection (restored to the previous working logic)
+  // -------------------------------------------------------------------------
   if (webview) {
     const chromeUA = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/138.0.0.0 Safari/537.36';
-    webview.src = 'https://web.whatsapp.com/?t=' + Date.now();  // Cache busting
-    webview.setAttribute('useragent', chromeUA);
 
-    // Permission flags for media access
+    // Set user agent and load URL (cache-busting)
+    try {
+      webview.setAttribute('useragent', chromeUA);
+      webview.src = 'https://web.whatsapp.com/?t=' + Date.now();
+    } catch (e) {
+      console.warn('No se pudo setear src/useragent del webview:', e);
+    }
+
+    // Permisos para media/popups
     ['allowpopups', 'allowfullscreen', 'allowmediacapture', 'allowcamera', 'allowmicrophone']
       .forEach(attr => webview.setAttribute(attr, 'on'));
 
-    // Browser compatibility workaround
+    // Escucha mensajes internos del webview para debugging
+    webview.addEventListener('console-message', (e) => {
+      // Para ver errores/console logs que ocurren dentro del webview
+      console.log('WEBVIEW:', e.message);
+    });
+
+    // Workarounds y detección
     webview.addEventListener('did-finish-load', () => {
       webview.executeJavaScript(`
-        if (document.body.innerText.includes("browser isn't supported")) {
-          Object.defineProperty(navigator, 'userAgent', {
-            value: '${chromeUA}',
-            configurable: false
-          });
-          location.reload();
-        }
+        try {
+          if (document.body && document.body.innerText && document.body.innerText.includes("browser isn't supported")) {
+            Object.defineProperty(navigator, 'userAgent', {
+              value: '${chromeUA}',
+              configurable: false
+            });
+            location.reload();
+          }
+        } catch(e) {}
       `).catch(()=>{});
 
-      // Iniciar verificación de QR (sólo si no hemos iniciado sesión)
+      // Start QR checks after load completes
       startQrDetection();
     });
 
-    // Inject custom CSS
+    // Insert CSS y polyfills cuando DOM ya está listo
     webview.addEventListener('dom-ready', async () => {
-      const basePath = isPackaged 
-        ? `file://${window.process.resourcesPath}`
-        : '';
-
-      await webview.insertCSS(`
-        @import url("${basePath}/styles/panel.css");
-        .browser-not-supported { display: none !important; }
-      `).catch(()=>{});
-
-      // Polyfill Chrome APIs expected by WhatsApp
-      webview.executeJavaScript(`
-        window.chrome = { runtime: {}, storage: {} };
-        Object.defineProperty(navigator, 'plugins', { value: [{
-          name: 'Chrome PDF Plugin', filename: 'internal-pdf-viewer'
-        }]});
-      `).catch(()=>{});
+      const basePath = isPackaged ? `file://${window.process.resourcesPath}` : '';
+      try {
+        await webview.insertCSS(`
+          @import url("${basePath}/styles/panel.css");
+          .browser-not-supported { display: none !important; }
+        `);
+      } catch(e) { /* no fatal */ }
+      try {
+        await webview.executeJavaScript(`
+          window.chrome = { runtime: {}, storage: {} };
+          Object.defineProperty(navigator, 'plugins', { value: [{ name: 'Chrome PDF Plugin', filename: 'internal-pdf-viewer' }]});
+        `);
+      } catch(e) { /* no fatal */ }
     });
 
+    // Reintentos y manejo de fallos
     webview.addEventListener('did-fail-load', (e) => {
       console.warn('webview did-fail-load', e);
-      setStatus('Fallo al cargar, intentando recargar...', true);
-      setTimeout(() => webview.reload(), 700);
+      setStatus('Fallo al cargar; reintentando...', true);
+      setTimeout(() => {
+        try { webview.reload(); } catch (err) { console.warn(err); }
+      }, 700);
     });
 
     webview.addEventListener('crashed', async () => {
       console.error('webview crashed — intentando resetear session y recargar...');
       setStatus('Webview crash. Reseteando sesión...', true);
       await winAPI.clearWhatsappSession();
-      setTimeout(() => webview.loadURL('https://web.whatsapp.com/?t=' + Date.now()), 500);
+      setTimeout(() => {
+        try { webview.loadURL('https://web.whatsapp.com/?t=' + Date.now()); } catch(e) {}
+      }, 500);
     });
 
-    // Detector simple de QR: si aparece el QR repetidamente durante X segundos
+    // Script que detecta presencia del QR en la página (igual que antes)
     const checkForQrScript = `
       (function() {
         try {
@@ -178,7 +216,6 @@ document.addEventListener('DOMContentLoaded', () => {
           for (const s of selectors) {
             if (document.querySelector(s)) return true;
           }
-          // Si detectamos elementos del panel principal (logged-in), devolvemos false
           if (document.querySelector('#pane-side') || document.querySelector('[data-testid="chat-list-search"]')) return false;
           return false;
         } catch (e) { return false; }
@@ -190,54 +227,53 @@ document.addEventListener('DOMContentLoaded', () => {
       if (qrCheckInterval) clearInterval(qrCheckInterval);
       if (qrCheckTimeout) clearTimeout(qrCheckTimeout);
 
-      // cada 3s verificamos si hay QR
       let checks = 0;
       qrCheckInterval = setInterval(async () => {
         checks++;
         try {
           const hasQr = await webview.executeJavaScript(checkForQrScript, true);
-          // si hay QR y han pasado > 4 checks (12s) mostramos el botón de reset
           if (hasQr && checks >= 4) {
             resetBtn.style.display = 'inline-block';
             setStatus('Parece que la sesión no está iniciada — puedes resetear.', true);
           } else if (!hasQr) {
-            // usuario probablemente autenticado o en otra pantalla
             resetBtn.style.display = 'none';
             statusMsg.style.display = 'none';
           }
 
-          // stop after 20 checks (~60s) para no dejar interval corriendo
           if (checks >= 20) {
             clearInterval(qrCheckInterval);
             qrCheckInterval = null;
           }
         } catch (err) {
           console.warn('Error verificando QR:', err);
+          // no interrumpir la verificación; esperamos al próximo interval
         }
       }, 3000);
 
-      // Safety timeout: si en 45s el webview sigue sin cargar, mostramos la opción de reset
+      // Timeout de seguridad: si en 45s aún hay problemas, mostrar botón de reset
       qrCheckTimeout = setTimeout(() => {
         resetBtn.style.display = 'inline-block';
         setStatus('Tiempo de espera excedido. Si no puedes entrar, pulsa "Resetear sesión".');
       }, 45000);
     }
 
-    // limpiar timers al destruir o recargar
-    webview.addEventListener('destroyed', () => { if (qrCheckInterval) clearInterval(qrCheckInterval); if (qrCheckTimeout) clearTimeout(qrCheckTimeout); });
+    // limpiar timers al destruir o recargar el webview
+    webview.addEventListener('destroyed', () => {
+      if (qrCheckInterval) clearInterval(qrCheckInterval);
+      if (qrCheckTimeout) clearTimeout(qrCheckTimeout);
+    });
 
-  }
+  } // end webview block
 
-  // Reacciones a mensajes del main (por ejemplo tray reset)
+  // Mensajes desde main
   winAPI?.onForceReloadWebview?.(() => {
-    if (webview) webview.loadURL('https://web.whatsapp.com/?t=' + Date.now());
+    try { webview.loadURL('https://web.whatsapp.com/?t=' + Date.now()); } catch(e) {}
   });
 
   winAPI?.onAppHide?.(() => {
-    // opcional: detener navegación para evitar estados intermedios
     try { if (webview && webview.stop) webview.stop(); } catch (e) {}
   });
 
-  // Initialize application
+  // Inicializar UI desde storage
   initFromStorage();
 });
