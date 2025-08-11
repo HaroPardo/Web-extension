@@ -5,11 +5,9 @@
       <div class="window-controls">
         <button id="close-btn" title="Close">✕</button>
         <button id="minimize-btn" title="Minimize">—</button>
-        
         <!-- Behavior mode selectors (the minimize and close one) -->
         <button id="minimize-on-blur-btn" title="Minimize on focus loss">Minimize ⤵️</button>
         <button id="close-on-blur-btn" title="Close on focus loss">Close ❌</button>
-        
         <!-- Pinning toggle -->
         <button id="pin-btn">📌 Pin</button>
       </div>
@@ -21,9 +19,15 @@
         id="whatsapp-tab"
         src="https://web.whatsapp.com/"
         allowpopups
-        partition="persist:whatsapp"  // Persistent session
+        partition="persist:whatsapp"
         style="width:100%; height:100%; border:none;"
       ></webview>
+    </div>
+
+    <!-- UI de soporte para diagnosticar/reiniciar sesión si queda colgada -->
+    <div id="status-bar" style="position: absolute; bottom: 8px; left: 8px; z-index: 30;">
+      <button id="reset-session-btn" style="display:none;">🔁 Resetear sesión WhatsApp</button>
+      <span id="status-msg" style="margin-left:10px;color:#ffcc00;display:none;"></span>
     </div>
   </div>
 

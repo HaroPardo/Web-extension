@@ -1,68 +1,11 @@
-/* Base reset and layout */
 * { box-sizing: border-box; }
-html, body, #app {
-  height: 100%;
-  margin: 0;
-  padding: 0;
-  font-family: system-ui;
-  background: #0b0b0d;
-  color: #ddd;
-  overflow: hidden;
-}
-
-/* Flex-based app container */
-#app {
-  display: flex;
-  flex-direction: column;
-  height: 100vh;
-  width: 400px; /* Default width */
-}
-
-/* Header styling */
-.header {
-  height: 44px;
-  display: flex;
-  justify-content: flex-end;
-  background: #2a2b3a;
-  padding: 6px;
-  z-index: 25;
-}
-
-/* Window control buttons */
-.window-controls { 
-  display: flex; 
-  gap: 6px; 
-  flex-wrap: wrap;
-}
-.window-controls button {
-  background: transparent;
-  border: none;
-  color: #fff;
-  padding: 6px 8px;
-  border-radius: 6px;
-  cursor: pointer;
-  white-space: nowrap;
-}
+html, body, #app { height: 100%; margin: 0; padding: 0; font-family: system-ui; background: #0b0b0d; color: #ddd; overflow: hidden; }
+#app { display: flex; flex-direction: column; height: 100vh; width: 400px; }
+.header { height: 44px; display: flex; justify-content: flex-end; background: #2a2b3a; padding: 6px; z-index: 25; }
+.window-controls { display: flex; gap: 6px; flex-wrap: wrap; }
+.window-controls button { background: transparent; border: none; color: #fff; padding: 6px 8px; border-radius: 6px; cursor: pointer; white-space: nowrap; }
 .window-controls button:hover { background: rgba(255,255,255,0.04); }
-
-/* Visual indicators */
-.window-controls .checkmark {
-  margin-left: 5px;
-  color: #4CAF50;
-  font-weight: bold;
-}
-.window-controls button.active {
-  background: rgba(76, 175, 80, 0.2);
-  border: 1px solid #4CAF50;
-}
-
-/* Webview container */
-.webview-wrap {
-  flex: 1;
-  min-height: 0; /* Critical for flex containment */
-}
-
-/* Responsive adjustments */
-@media (max-width: 700px) { 
-  #app { width: 320px; } 
-}
+.window-controls .checkmark { margin-left: 5px; color: #4CAF50; font-weight: bold; }
+.window-controls button.active { background: rgba(76, 175, 80, 0.2); border: 1px solid #4CAF50; }
+.webview-wrap { flex: 1; min-height: 0; }
+@media (max-width: 700px) { #app { width: 320px; } }

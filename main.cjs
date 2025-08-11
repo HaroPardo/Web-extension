@@ -1,5 +1,5 @@
 const path = require('path');
-const { app, BrowserWindow, ipcMain, screen, Tray, Menu } = require('electron');
+const { app, BrowserWindow, ipcMain, screen, Tray, Menu, session } = require('electron');
 const ElectronStore = require('electron-store');
 
 // Environment detection for resource loading
@@ -22,6 +22,14 @@ const BLUR_MODES = {
   CLOSE: 'close'
 };
 
+// ----------------- Ajuste del userData para evitar OneDrive / Desktop locks -----------------
+try {
+  const userDataPath = path.join(app.getPath('appData'), 'SocialSidebar');
+  app.setPath('userData', userDataPath);
+  console.log('userData path set to', app.getPath('userData'));
+} catch (err) {
+  console.warn('No se pudo cambiar userData path, se usará el predeterminado:', err);
+}
 
 function createWindow() {
   const primaryDisplay = screen.getPrimaryDisplay();
@@ -33,18 +41,18 @@ function createWindow() {
   
   // Retrieve stored window state or use defaults
   const savedSize = store.get('windowSize', { width: DEFAULT_WIDTH, height: DEFAULT_HEIGHT });
-  const savedPosition = store.get('windowPosition', { 
-    x: 0, 
+  const savedPosition = store.get('windowPosition', {
+    x: 0,
     y: Math.floor((height - DEFAULT_HEIGHT) / 2)  // Center vertically
   });
   
   const blurMode = store.get('blurMode', BLUR_MODES.MINIMIZE);
 
-  const preloadPath = isPackaged 
+  const preloadPath = isPackaged
     ? path.join(process.resourcesPath, 'preload.cjs')
     : path.join(__dirname, 'preload.cjs');
   
-  const htmlPath = isPackaged 
+  const htmlPath = isPackaged
     ? path.join(process.resourcesPath, 'panel.html')
     : path.join(__dirname, 'panel.html');
 
@@ -64,7 +72,7 @@ function createWindow() {
     show: false,
     webPreferences: {
       preload: preloadPath,
-      contextIsolation: true, 
+      contextIsolation: true,
       nodeIntegration: false,
       webviewTag: true,
       plugins: true,
@@ -106,6 +114,8 @@ function createWindow() {
   mainWindow.on('close', (e) => {
     if (!app.isQuiting) {
       e.preventDefault();
+      // Inform renderer that the window is being hidden (renderer can pause webview if needed)
+      try { mainWindow.webContents.send('app-hide'); } catch (err) {}
       mainWindow.hide();
     }
     store.set('windowSize', mainWindow.getSize());
@@ -140,12 +150,19 @@ function createWindow() {
     if (mainWindow.isMinimized()) mainWindow.restore();
     mainWindow.focus();
   });
+
+  // Log potential session path for debugging
+  try {
+    console.log('WhatsApp storage path (session):', session.fromPartition('persist:whatsapp').getUserAgent ? 'session-ok' : 'session-created');
+  } catch (err) {
+    console.warn('No se pudo inspeccionar la sesión persist:whatsapp', err);
+  }
 }
 
  // Creates system tray icon with context menu
 
 function createTray() {
-  const iconPath = isPackaged 
+  const iconPath = isPackaged
     ? path.join(process.resourcesPath, 'icon.ico')
     : path.join(__dirname, 'icon.ico');
   
@@ -156,6 +173,20 @@ function createTray() {
       {
         label: 'Open WhatsApp',
         click: () => mainWindow.show()
+      },
+      {
+        label: 'Reset WhatsApp session',
+        click: async () => {
+          try {
+            const s = session.fromPartition('persist:whatsapp');
+            await s.clearStorageData({ storages: ['serviceworkers','caches','indexdb','localstorage','cookies'] });
+            await s.clearCache();
+            // If window exists, reload webview via renderer
+            if (mainWindow && !mainWindow.isDestroyed()) mainWindow.webContents.send('force-reload-webview');
+          } catch (err) {
+            console.error('Error reseteando session desde tray:', err);
+          }
+        }
       },
       {
         label: 'Exit',
@@ -185,7 +216,10 @@ function createTray() {
 }
 
 // Application lifecycle management
-app.whenReady().then(() => {
+app.whenReady().then(async () => {
+  // NOTA: ya no limpiamos la sesión automáticamente al inicio para preservar el login.
+  // En su lugar, proporcionamos un botón/IPC para reset manual en caso de corrupción.
+
   createWindow();
   createTray();
   
@@ -208,6 +242,22 @@ ipcMain.on('set-pin-status', (_, status) => {
 ipcMain.on('set-blur-mode', (_, mode) => store.set('blurMode', mode));
 ipcMain.handle('get-pin-status', () => store.get('isPinned', false));
 ipcMain.handle('get-blur-mode', () => store.get('blurMode', BLUR_MODES.MINIMIZE));
+
+// IPC: limpiar session WhatsApp a demanda
+ipcMain.handle('clear-whatsapp-session', async () => {
+  try {
+    const s = session.fromPartition('persist:whatsapp');
+    await s.clearStorageData({ storages: ['serviceworkers','caches','indexdb','localstorage','cookies'] });
+    await s.clearCache();
+    return { ok: true };
+  } catch (err) {
+    console.error('clear-whatsapp-session failed:', err);
+    return { ok: false, error: String(err) };
+  }
+});
+
+// Provide userData path for debugging desde renderer si se necesita
+ipcMain.handle('get-userdata-path', () => app.getPath('userData'));
 
 app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') app.quit();
